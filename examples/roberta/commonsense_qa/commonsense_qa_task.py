@@ -103,9 +103,15 @@ class CommonsenseQATask(FairseqTask):
                 # format: `<s> Q: Where would I not want a fox? </s> A: hen house </s>`
                 question = 'Q: ' + question
                 question_toks = binarize(question, append_bos=True)
+                if 'cose' in example['question'].keys():
+                    explanation = 'E: ' + example['question']['cose']
+                    explanation_toks = binarize(explanation, append_bos=True)
                 for i, choice in enumerate(example['question']['choices']):
                     src = 'A: ' + choice['text']
-                    src_bin = torch.cat([question_toks, binarize(src)])
+                    if 'cose' in example['question'].keys():
+                        src_bin = torch.cat([question_toks, explanation_toks, binarize(src)])
+                    else:
+                        src_bin = torch.cat([question_toks, binarize(src)])
                     src_tokens[i].append(src_bin)
                     src_lengths[i].append(len(src_bin))
         assert all(len(src_tokens[0]) == len(src_tokens[i]) for i in range(self.args.num_classes))
