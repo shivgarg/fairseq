@@ -1,0 +1,19 @@
+universe = vanilla
+Initialdir = /u/shivgarg/Documents/fall2019/nlp_project/roberta-cosqa/fairseq/examples/roberta/commonsense_qa
+Executable = /lusr/bin/bash
+Arguments = ./run.sh
++Group   = "GRAD"
++Project = "INSTRUCTIONAL"
++ProjectDescription = "Course project for CS388 NLP"
+Requirements = TARGET.GPUSlot
+getenv = True
+request_GPUs = 1
++GPUJob = true
+Log = new.log
+Error = new.err
+Output = new.out
+Notification = complete
+Notify_user =  shivamgarg@utexas.edu
+Queue 1
+
+
