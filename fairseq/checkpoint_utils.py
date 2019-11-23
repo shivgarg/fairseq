@@ -94,8 +94,13 @@ def save_checkpoint(args, trainer, epoch_itr, val_loss):
                 os.remove(old_chk)
 
 
-def load_checkpoint(args, trainer, data_selector=None):
-    """Load a checkpoint and restore the training iterator."""
+def load_checkpoint(args, trainer, **passthrough_args):
+    """
+    Load a checkpoint and restore the training iterator.
+
+    *passthrough_args* will be passed through to
+    ``trainer.get_train_iterator``.
+    """
     # only one worker should attempt to create the required dir
     if args.distributed_rank == 0:
         os.makedirs(args.save_dir, exist_ok=True)
@@ -124,10 +129,18 @@ def load_checkpoint(args, trainer, data_selector=None):
     if extra_state is not None and not args.reset_dataloader:
         # restore iterator from checkpoint
         itr_state = extra_state['train_iterator']
-        epoch_itr = trainer.get_train_iterator(epoch=itr_state['epoch'], load_dataset=True, data_selector=data_selector)
+        epoch_itr = trainer.get_train_iterator(
+            epoch=itr_state['epoch'],
+            load_dataset=True,
+            **passthrough_args
+        )
         epoch_itr.load_state_dict(itr_state)
     else:
-        epoch_itr = trainer.get_train_iterator(epoch=0, load_dataset=True, data_selector=data_selector)
+        epoch_itr = trainer.get_train_iterator(
+            epoch=0,
+            load_dataset=True,
+            **passthrough_args
+        )
 
     trainer.lr_step(epoch_itr.epoch)
 
@@ -394,6 +407,13 @@ def prune_state_dict(state_dict, args):
                 substitution_match = pruning_pass["substitution_regex"].search(layer_name)
                 new_state_key = layer_name[:substitution_match.start(1)] + new_layer_number + layer_name[substitution_match.end(1):]
                 new_state_dict[new_state_key] = state_dict[layer_name]
+
+    # Since layers are now pruned, *_layers_to_keep are no longer needed.
+    # This is more of "It would make it work fix" rather than a proper fix.
+    if "encoder_layers_to_keep" in vars(args):
+        args.encoder_layers_to_keep = None
+    if "decoder_layers_to_keep" in vars(args):
+        args.decoder_layers_to_keep = None
 
     return new_state_dict
 

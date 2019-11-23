@@ -28,6 +28,7 @@ class BARTModel(TransformerModel):
         return {
             'bart.large': 'http://dl.fbaipublicfiles.com/fairseq/models/bart.large.tar.gz',
             'bart.large.mnli': 'http://dl.fbaipublicfiles.com/fairseq/models/bart.large.mnli.tar.gz',
+            'bart.large.cnn': 'http://dl.fbaipublicfiles.com/fairseq/models/bart.large.cnn.tar.gz',
         }
 
     def __init__(self, args, encoder, decoder):
@@ -41,14 +42,6 @@ class BARTModel(TransformerModel):
     @staticmethod
     def add_args(parser):
         super(BARTModel, BARTModel).add_args(parser)
-        parser.add_argument(
-            '--max-source-positions', default=1024, type=int, metavar='N',
-            help='max number of tokens in the source sequence'
-        )
-        parser.add_argument(
-            '--max-target-positions', default=1024, type=int, metavar='N',
-            help='max number of tokens in the target sequence'
-        )
         parser.add_argument(
             '--pooler-dropout', type=float, metavar='D',
             help='dropout probability in the masked_lm pooler layers'
@@ -171,6 +164,13 @@ class BARTModel(TransformerModel):
                     keys_to_delete.append(k)
         for k in keys_to_delete:
             del state_dict[k]
+
+        # When finetuning on translation task, remove last row of
+        # embedding matrix that corresponds to mask_idx token.
+        loaded_dict_size = state_dict['encoder.embed_tokens.weight'].size(0)
+        if loaded_dict_size == len(self.encoder.dictionary) + 1 and '<mask>' not in self.encoder.dictionary:
+            state_dict['encoder.embed_tokens.weight'] = state_dict['encoder.embed_tokens.weight'][:loaded_dict_size-1, :]
+            state_dict['decoder.embed_tokens.weight'] = state_dict['decoder.embed_tokens.weight'][:loaded_dict_size-1, :]
 
         # Copy any newly-added classification heads into the state dict
         # with their current weights.
