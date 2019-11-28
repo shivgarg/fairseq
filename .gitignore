@@ -138,3 +138,4 @@ data-bin/
 # data dir
 **/data*
 **/roberta.base*
+**/gpt**
