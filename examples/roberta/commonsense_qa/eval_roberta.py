@@ -17,16 +17,18 @@ roberta.eval()  # disable dropout
 #roberta.cuda()  # use the GPU (optional)
 
 nsamples, ncorrect = 0, 0
-
+i=0
 with open(args.json_file) as h:
     for line in h:
+        print(i)
+        i+=1
         example = json.loads(line)
         scores = []
         for choice in example['question']['choices']:
             if 'cose' in example['question']:
                 input = roberta.encode(
                         'Q: ' + example['question']['stem'],
-                        'E: ' + example['question']['cose'],
+                        #example['question']['cose'],
                         'A: ' + choice['text'],
                         no_separator=True
                         )
@@ -40,8 +42,10 @@ with open(args.json_file) as h:
             scores.append(score)
         pred = torch.cat(scores).argmax()
         example['question']['ans_scores'] =list(map(lambda a: a.item(), scores))
+        example['pred'] = pred.item()
         out.write(json.dumps(example)+'\n')
         answer = ord(example['answerKey']) - ord('A')
+        example['answer']=answer
         nsamples += 1
         if pred == answer:
             ncorrect += 1

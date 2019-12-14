@@ -73,11 +73,11 @@ class CommonsenseQATask(FairseqTask):
             split (str): name of the split (e.g., train, valid, test)
         """
 
-        def binarize(s, append_bos=False):
+        def binarize(s, append_bos=False, append_eos=True):
             if self.bpe is not None:
                 s = self.bpe.encode(s)
             tokens = self.vocab.encode_line(
-                s, append_eos=True, add_if_not_exist=False,
+                s, append_eos=append_eos, add_if_not_exist=False,
             ).long()
             if append_bos and self.args.init_token is not None:
                 tokens = torch.cat([tokens.new([self.args.init_token]), tokens])
@@ -101,17 +101,18 @@ class CommonsenseQATask(FairseqTask):
                 question = example['question']['stem']
                 assert len(example['question']['choices']) == self.args.num_classes
                 # format: `<s> Q: Where would I not want a fox? </s> A: hen house </s>`
-                question = 'Q: ' + question
+                question = 'Q: ' + question.strip()
                 question_toks = binarize(question, append_bos=True)
-                if 'cose' in example['question'].keys():
-                    explanation = 'E: ' + example['question']['cose']
-                    explanation_toks = binarize(explanation, append_bos=True)
+                #for i in range(5):
+                #    if 'cose{}'.format(i) in example['question'].keys():
+                #        explanation += '  ' + example['question']['cose{}'.format(i)].strip()
+                explanation_toks = binarize(example['question']['cose'], append_eos=False, append_bos=False)
                 for i, choice in enumerate(example['question']['choices']):
-                    src = 'A: ' + choice['text']
-                    if 'cose' in example['question'].keys():
-                        src_bin = torch.cat([question_toks, explanation_toks, binarize(src)])
-                    else:
-                        src_bin = torch.cat([question_toks, binarize(src)])
+                    src = 'A: ' + choice['text'].strip()
+                    #if 'cose' in example['question'].keys():
+                    src_bin = torch.cat([question_toks, explanation_toks, binarize(src, append_bos=False,append_eos=True)])
+                    #else:
+                    #    src_bin = torch.cat([question_toks, binarize(src)])
                     src_tokens[i].append(src_bin)
                     src_lengths[i].append(len(src_bin))
         assert all(len(src_tokens[0]) == len(src_tokens[i]) for i in range(self.args.num_classes))
